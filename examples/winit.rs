@@ -10,6 +10,7 @@ use winit::{
 use wry::WebViewBuilder;
 
 fn main() -> wry::Result<()> {
+  std::env::set_var("WEBKIT_DISABLE_DMABUF_RENDERER", "1");
   #[cfg(any(
     target_os = "linux",
     target_os = "dragonfly",
@@ -36,12 +37,25 @@ fn main() -> wry::Result<()> {
   let event_loop = EventLoop::new().unwrap();
   let window = WindowBuilder::new()
     .with_inner_size(winit::dpi::LogicalSize::new(800, 800))
+    .with_transparent(true)
     .build(&event_loop)
     .unwrap();
 
   #[allow(unused_mut)]
   let mut builder = WebViewBuilder::new(&window);
-  let _webview = builder.with_url("https://tauri.app").build()?;
+  let _webview = builder
+    .with_html(
+      r#"<html>
+          <body style="background-color:rgba(87,87,87,0.5);"></body>
+          <script>
+            window.onload = function() {
+              document.body.innerText = `hello, ${navigator.userAgent}`;
+            };
+          </script>
+        </html>"#,
+    )
+    .with_transparent(true)
+    .build()?;
 
   event_loop
     .run(move |event, evl| {
@@ -59,26 +73,6 @@ fn main() -> wry::Result<()> {
       }
 
       match event {
-        #[cfg(any(
-          target_os = "linux",
-          target_os = "dragonfly",
-          target_os = "freebsd",
-          target_os = "netbsd",
-          target_os = "openbsd",
-        ))]
-        Event::WindowEvent {
-          event: WindowEvent::Resized(size),
-          ..
-        } => {
-          use wry::dpi::{PhysicalPosition, PhysicalSize};
-
-          _webview
-            .set_bounds(wry::Rect {
-              position: PhysicalPosition::new(0, 0).into(),
-              size: PhysicalSize::new(size.width, size.height).into(),
-            })
-            .unwrap();
-        }
         Event::WindowEvent {
           event: WindowEvent::CloseRequested,
           ..
